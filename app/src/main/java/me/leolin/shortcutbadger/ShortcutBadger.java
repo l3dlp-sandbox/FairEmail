@@ -78,8 +78,12 @@ public final class ShortcutBadger {
     public static boolean applyCount(Context context, int badgeCount) {
         try {
             applyCountOrThrow(context, badgeCount);
+            eu.faircode.email.EntityLog.log(context, "Applied badge count=" + badgeCount +
+                    " badger=" + sShortcutBadger.getClass());
             return true;
         } catch (ShortcutBadgeException e) {
+            eu.faircode.email.EntityLog.log(context, "badger=" + sShortcutBadger.getClass() + "\n" +
+                    e + "\n" + Log.getStackTraceString(e));
             if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
                 Log.d(LOG_TAG, "Unable to execute badge", e);
             }
@@ -196,19 +200,29 @@ public final class ShortcutBadger {
     private static boolean initBadger(Context context) {
         Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (launchIntent == null) {
+            eu.faircode.email.EntityLog.log(context, "Badger no launch intent pkg=" + context.getPackageName());
             Log.e(LOG_TAG, "Unable to find launch intent for package " + context.getPackageName());
             return false;
         }
 
         sComponentName = launchIntent.getComponent();
+        eu.faircode.email.EntityLog.log(context, "Badger component=" + sComponentName);
 
         Intent intent = new Intent(Intent.ACTION_MAIN);
         intent.addCategory(Intent.CATEGORY_HOME);
         List<ResolveInfo> resolveInfos = context.getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        eu.faircode.email.EntityLog.log(context, "Badger resolved count=" + (resolveInfos == null ? null : resolveInfos.size()));
 
         //Turns out framework does not guarantee to put DEFAULT Activity on top of the list.
         ResolveInfo resolveInfoDefault = context.getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        eu.faircode.email.EntityLog.log(context, "Badger default=" +
+                (resolveInfoDefault == null ? null : resolveInfoDefault.activityInfo.packageName));
+
         validateInfoList(resolveInfoDefault, resolveInfos);
+
+        for (ResolveInfo ri : resolveInfos)
+            eu.faircode.email.EntityLog.log(context, "Badger resolved=" + ri.activityInfo.packageName +
+                    (ri.activityInfo.packageName.equals(resolveInfoDefault.activityInfo.packageName) ? "*" : ""));
 
         for (ResolveInfo resolveInfo : resolveInfos) {
             String currentHomePackage = resolveInfo.activityInfo.packageName;
@@ -231,6 +245,8 @@ public final class ShortcutBadger {
             }
         }
 
+        eu.faircode.email.EntityLog.log(context, "Selected badger=" + sShortcutBadger.getClass());
+
         if (sShortcutBadger == null) {
             if (Build.MANUFACTURER.equalsIgnoreCase("ZUK"))
                 sShortcutBadger = new ZukHomeBadger();
@@ -243,6 +259,8 @@ public final class ShortcutBadger {
             else
                 sShortcutBadger = new DefaultBadger();
         }
+
+        eu.faircode.email.EntityLog.log(context, "Using badger=" + sShortcutBadger.getClass());
 
         return true;
     }
